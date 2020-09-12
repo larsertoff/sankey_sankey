@@ -5,6 +5,8 @@ import random
 import plotly
 
 colors = list(vars(colorama.Fore).values())
+colorama.init()
+
 
 def color_randomizer(text) -> str:
     colors = list(vars(colorama.Fore).values())
@@ -13,7 +15,9 @@ def color_randomizer(text) -> str:
     x = ''.join(colored_chars)
     return x
 
-x = input(color_randomizer('Input file name in the data folder either .csv or .xlsx: '))
+# Sneaky to ensure it works with ps
+print(color_randomizer('Input file name in the data folder either .csv or .xlsx: '))
+x = input()
 
 try:
     if 'csv' in x:
@@ -27,6 +31,8 @@ except:
 # Preprocess
 
 df = df.assign(lvl1 = 'stop_1', lvl2 = 'stop_2', lvl3 = 'stop_3', lvl4 = 'stop_4', lvl5 = 'stop_5')
+df.columns = df.columns.str.lower()
+
 
 print(color_randomizer('This is your dataframe: '))
 print(df.head())
