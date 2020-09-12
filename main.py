@@ -1,55 +1,74 @@
 import pandas as pd
 import os
+import colorama
+import random
+import plotly
 
+colors = list(vars(colorama.Fore).values())
 
-print("Welcom young padowan \n")
+def color_randomizer(text) -> str:
+    colors = list(vars(colorama.Fore).values())
+    five_colors = random.sample(colors, 5)
+    colored_chars = [random.choice(five_colors) + char for char in text]
+    x = ''.join(colored_chars)
+    return x
 
-x = input('give me a file name in the data folder to continue fx example_data.csv: ')
+x = input(color_randomizer('Input file name in the data folder either .csv or .xlsx: '))
 
-if 'csv' in x:
-    df = pd.read_csv(os.path.join('data', x))
-else:
-    df = pd.read_excel(os.path.join('data', x))
+try:
+    if 'csv' in x:
+        df = pd.read_csv(os.path.join('data', x))
+    elif 'xlsx' in x:
+        df = pd.read_excel(os.path.join('data', x))
+    else:
+        df = pd.read_csv(os.path.join('data', 'example_data.csv'))
+except:
+    raise ValueError(color_randomizer('You are fucked...'))
+# Preprocess
 
+df = df.assign(lvl1 = 'stop_1', lvl2 = 'stop_2', lvl3 = 'stop_3', lvl4 = 'stop_4', lvl5 = 'stop_5')
 
+print(color_randomizer('This is your dataframe: '))
+print(df.head())
+print(color_randomizer("Now lets make it into a Sankey Plot"))
 
+# Made it now so it does not stop makes more sense maybe?
+for tup in df.itertuples():
+    i = tup.Index
+    string_to_split = tup.comb
+    list_of_v = string_to_split.split('_')
+    for j in range(len(list_of_v)):
+        if j > 4:
+            break
+        df.loc[i, 'lvl'+str(j+1)] = str(list_of_v[j])+ '_' + str(j+1)
 
-
-
-def genSankey(df,cat_cols=[],value_cols='',title='Sankey Diagram'):
-    # maximum of 6 value cols -> 6 colors
-    colorPalette = ['#4B8BBE','#306998','#FFE873','#FFD43B','#646464']
-    labelList = []
-    colorNumList = []
-    for catCol in cat_cols:
-        labelListTemp =  list(set(df[catCol].values))
-        colorNumList.append(len(labelListTemp))
-        labelList = labelList + labelListTemp
+def generate_sankey(df, cat_columns=[], value_cols='', title='Sankey Diagram', colors = ['#9b5de5','#f15bb5','#fee440','#00bbf9','#00f5d4']):
+    label_list = []
+    color_list = []
+    for cat_col in cat_columns:
+        label_list_temp = list(set(df[cat_col].values))
+        color_list.append(len(label_list_temp))
+        label_list = label_list + label_list_temp
         
-    # remove duplicates from labelList
-    labelList = list(dict.fromkeys(labelList))
-    
-    # define colors based on number of levels
-    colorList = []
-    for idx, colorNum in enumerate(colorNumList):
-        colorList = colorList + [colorPalette[idx]]*colorNum
+    label_list = list(dict.fromkeys(label_list))
+
+    color_list_2 = []
+    for i, color_n in enumerate(color_list):
+        color_list_2 = color_list_2 + [colors[i]]*color_n
         
-    # transform df into a source-target pair
-    for i in range(len(cat_cols)-1):
+    for i in range(len(cat_columns)-1):
         if i==0:
-            sourceTargetDf = df[[cat_cols[i],cat_cols[i+1],value_cols]]
-            sourceTargetDf.columns = ['source','target','count']
+            source_df = df[[cat_columns[i],cat_columns[i+1], value_cols]]
+            source_df.columns = ['source','target','count']
         else:
-            tempDf = df[[cat_cols[i],cat_cols[i+1],value_cols]]
-            tempDf.columns = ['source','target','count']
-            sourceTargetDf = pd.concat([sourceTargetDf,tempDf])
-        sourceTargetDf = sourceTargetDf.groupby(['source','target']).agg({'count':'sum'}).reset_index()
+            temp_df = df[[cat_columns[i], cat_columns[i+1], value_cols]]
+            temp_df.columns = ['source','target','count']
+            source_df = pd.concat([source_df,temp_df])
+        source_df = source_df.groupby(['source','target']).agg({'count':'sum'}).reset_index()
         
-    # add index for source-target pair
-    sourceTargetDf['sourceID'] = sourceTargetDf['source'].apply(lambda x: labelList.index(x))
-    sourceTargetDf['targetID'] = sourceTargetDf['target'].apply(lambda x: labelList.index(x))
+    source_df['sourceID'] = source_df['source'].apply(lambda x: label_list.index(x))
+    source_df['targetID'] = source_df['target'].apply(lambda x: label_list.index(x))
     
-    # creating the sankey diagram
     data = dict(
         type='sankey',
         node = dict(
@@ -59,13 +78,13 @@ def genSankey(df,cat_cols=[],value_cols='',title='Sankey Diagram'):
             color = "black",
             width = 0.5
           ),
-          label = labelList,
-          color = colorList
+          label = label_list,
+          color = color_list_2
         ),
         link = dict(
-          source = sourceTargetDf['sourceID'],
-          target = sourceTargetDf['targetID'],
-          value = sourceTargetDf['count']
+          source = source_df['sourceID'],
+          target = source_df['targetID'],
+          value = source_df['count']
         )
       )
     
@@ -79,8 +98,11 @@ def genSankey(df,cat_cols=[],value_cols='',title='Sankey Diagram'):
     fig = dict(data=[data], layout=layout)
     return fig
 
-df = pd.read_excel('data/df_sank_red.xlsx')
+fig = generate_sankey(df, cat_columns=['lvl1','lvl2', 'lvl3', 'lvl4', 'lvl5'], value_cols='count', title='Sankey Diagram')
 
-print(df.head())
+plotly.offline.plot(fig, validate=True)
+
+print(color_randomizer('Success!!!!!!!!!!!!!!!!!!'))
+
 
 
